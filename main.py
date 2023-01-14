@@ -150,7 +150,7 @@ def main():
     dp.add_handler(CallbackQueryHandler(keyboard_callback)) 
 
     # Start the Bot
-    dp.run_polling(pool_timeout=1)
+    dp.run_polling()
 
     try:
         past_email_ids = set()

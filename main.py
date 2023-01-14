@@ -1,5 +1,4 @@
 from credentials import *
-from OpenAI import *
 
 import os.path
 
@@ -18,6 +17,8 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
 from telegram.ext import Updater, CommandHandler
+
+import openai
 
 
 def send_email(to, subject, body):
@@ -52,6 +53,15 @@ def handle_messages(update, context):
     body = ' '.join(message_text_list[3:])
     send_email(to, subject, body)
     update.message.reply_text('Email sent successfully!')
+
+
+def getSummary(prompt, maxlimit=50, randomness=0, model="text-davinci-003"):
+    openai.api_key = OPENAI_API_KEY
+
+    response = openai.Completion.create(
+        model=model, prompt='Summarise this "'+prompt+'"', temperature=randomness, max_tokens=maxlimit)
+
+    return response.choices[0].text.strip()
 
 
 def main():
@@ -130,7 +140,7 @@ def receive_new_email(past_email_ids):
                         from_ = header['value']
                     elif header['name'] == 'subject' or header['name'] == 'Subject':
                         subject = header['value']
-                snippet = msg["snippet"]
+                snippet = getSummary(msg["snippet"])
 
                 tele_msg = f'From: {from_}\nSubject: {subject}\nMessage: {snippet}'
 

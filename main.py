@@ -16,12 +16,12 @@ from base64 import urlsafe_b64encode
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
-from telegram.ext import Updater, CommandHandler, MessageHandler, CallbackQueryHandler, InlineQueryHandler, ContextTypes, ApplicationBuilder
+from telegram.ext import CommandHandler, MessageHandler, CallbackQueryHandler, InlineQueryHandler, ContextTypes, ApplicationBuilder
 
 import openai
 
 messageErrorID = -1
-defaultMessage = "To: \nSubject: \nBody: \n"
+defaultMessage = "To: \nSubject: \nBody: \n\n\n"
 defaultToMessage = "To: "
 defaultSubjectMessage = "Subject: "
 defaultBodyMessage = "Body: "
@@ -41,6 +41,9 @@ completedKeyboard.append([InlineKeyboardButton("/Send", callback_data='callback_
 def returnEmail():
     return toComponent + "\n" + subjectComponent + "\n" + bodyComponent + "\n"
 
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await context.bot.send_message(chat_id=update.effective_chat.id, text="Welcome to Schinner Inc. and Sons. Please type /email to send an email.")
+
 async def email(update: Update, context: ContextTypes.DEFAULT_TYPE):
     global prevId
     if(prevId!=-1):
@@ -49,7 +52,7 @@ async def email(update: Update, context: ContextTypes.DEFAULT_TYPE):
     global messageErrorID
     if(messageErrorID!=-1):
         await context.bot.delete_message(chat_id=update.effective_chat.id,message_id=messageErrorID)
-        messageErrorID = -1    
+        messageErrorID = -1   
     global toComponent
     global subjectComponent
     global bodyComponent
@@ -62,7 +65,7 @@ async def email(update: Update, context: ContextTypes.DEFAULT_TYPE):
     reply_markup = InlineKeyboardMarkup(keyboard)
     msg = await context.bot.send_message(chat_id=update.effective_chat.id, text=emailComponent, reply_markup=reply_markup)
     prevId = msg.message_id
-    await update.message.delete()
+
 
 async def inline_query(update: Update, context: ContextTypes.DEFAULT_TYPE):
     botName = "@schinner_inc_and_sons_bot /"
@@ -79,7 +82,7 @@ async def inline_query(update: Update, context: ContextTypes.DEFAULT_TYPE):
             messageErrorID = await context.bot.send_message(chat_id=update.message.chat_id,text="Invalid Email Address!(e.g. johnapplesmitch@example.com)")
             messageErrorID = messageErrorID.message_id  
         if(isValidEmail(textContent)):
-            await context.bot.deleteMessage(chat_id=update.effective_chat.id,message_id=messageErrorID)        
+            await context.bot.deleteMessage(chat_id=update.effective_chat.id,message_id=messageErrorID)   
     elif (textContent.startswith("Subject:")):
         global subjectComponent
         subjectComponent = textContent
@@ -94,7 +97,7 @@ async def inline_query(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if (toComponent != defaultToMessage and subjectComponent != defaultSubjectMessage and bodyComponent != defaultBodyMessage and isValidEmail(toComponent)):
         keyboard = completedKeyboard
     reply_markup = InlineKeyboardMarkup(keyboard)
-    await context.bot.editMessageText(text=emailComponent,chat_id=update.effective_chat.id, message_id=prevId, reply_markup=reply_markup) 
+    await context.bot.editMessageText(text=emailComponent,chat_id=update.effective_chat.id, message_id=prevId, reply_markup=reply_markup)
     await update.message.delete()
 
 async def keyboard_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -138,11 +141,11 @@ def getSummary(prompt, maxlimit=50, randomness=0, model="text-davinci-003"):
 def isValidEmail(email : str):
     if('@' in email and '.com' in email):
         return True
-    return False    
+    return False   
 
 def main():
     dp = ApplicationBuilder().token(TELEGRAM_API_KEY).build()
-
+    dp.add_handler(CommandHandler('start', start))
     dp.add_handler(CommandHandler('email', email))
     
     #application.add_handler(InlineQueryHandler(callback=inline_query))
@@ -152,19 +155,18 @@ def main():
     # Start the Bot
     dp.run_polling()
 
-    try:
-        past_email_ids = set()
+    # try:
+    #     past_email_ids = set()
 
-        while True:
-            receive_new_email(past_email_ids)
+    #     while True:
+    #         receive_new_email(past_email_ids)
 
+    #         # Wait for 10 seconds before checking for new emails again
+    #         time.sleep(10)
 
-            # Wait for 10 seconds before checking for new emails again
-            time.sleep(10)
-
-    except HttpError as error:
-        # TODO(developer) - Handle errors from gmail API.
-        print(f'An error occurred: {error}')
+    # except HttpError as error:
+    #     # TODO(developer) - Handle errors from gmail API.
+    #     print(f'An error occurred: {error}')
 
     # Run the bot until you press Ctrl-C or the process receives SIGINT,
     # SIGTERM or SIGABRT. This should be used most of the time, since

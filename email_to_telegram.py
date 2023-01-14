@@ -59,16 +59,16 @@ def main():
                             userId='me', id=msg_id).execute()
 
                         headers = msg['payload']['headers']
-                        to = ''
                         from_ = ''
+                        subject = ''
                         for header in headers:
-                            if header['name'] == 'To':
-                                to = header['value']
-                            elif header['name'] == 'From':
+                            if header['name'] == 'From':
                                 from_ = header['value']
+                            elif header['name'] == 'Subject':
+                                subject = header['value']
                         snippet = msg["snippet"]
 
-                        tele_msg = f'To: {to}\nFrom: {from_}\nMessage: {snippet}'
+                        tele_msg = f'From: {from_}\nSubject: {subject}\nMessage: {snippet}'
                         print(tele_msg)
 
                         # Add the message id to the processed_messages set

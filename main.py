@@ -20,6 +20,7 @@ from telegram.ext import Updater, CommandHandler, MessageHandler, CallbackQueryH
 
 import openai
 
+messageErrorID = -1
 defaultMessage = "To: \nSubject: \nBody: \n"
 defaultToMessage = "To: "
 defaultSubjectMessage = "Subject: "
@@ -28,7 +29,7 @@ toComponent = "To: "
 subjectComponent = "Subject: "
 bodyComponent = "Body: "
 emailComponent = defaultMessage
-prevId = 0
+prevId = -1
 keyboard = [
     [InlineKeyboardButton("/To: ", switch_inline_query_current_chat="/To: ")],
     [InlineKeyboardButton("/Subject: ", switch_inline_query_current_chat="/Subject: ")],
@@ -41,6 +42,14 @@ def returnEmail():
     return toComponent + "\n" + subjectComponent + "\n" + bodyComponent + "\n"
 
 async def email(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    global prevId
+    if(prevId!=-1):
+        await context.bot.delete_message(chat_id=update.effective_chat.id,message_id=prevId)
+        prevId = -1
+    global messageErrorID
+    if(messageErrorID!=-1):
+        await context.bot.delete_message(chat_id=update.effective_chat.id,message_id=messageErrorID)
+        messageErrorID = -1    
     global toComponent
     global subjectComponent
     global bodyComponent
@@ -52,19 +61,25 @@ async def email(update: Update, context: ContextTypes.DEFAULT_TYPE):
     global keyboard
     reply_markup = InlineKeyboardMarkup(keyboard)
     msg = await context.bot.send_message(chat_id=update.effective_chat.id, text=emailComponent, reply_markup=reply_markup)
-    global prevId
     prevId = msg.message_id
-
+    await update.message.delete()
 
 async def inline_query(update: Update, context: ContextTypes.DEFAULT_TYPE):
     botName = "@schinner_inc_and_sons_bot /"
     if not update.message.text.startswith(botName):
+        await update.message.delete()
         return
     botNameLength = len(botName)
     textContent = update.message.text[botNameLength:]
     if (textContent.startswith("To:")):
         global toComponent
         toComponent = textContent
+        global messageErrorID
+        if(not isValidEmail(textContent) and messageErrorID==-1):
+            messageErrorID = await context.bot.send_message(chat_id=update.message.chat_id,text="Invalid Email Address!(e.g. johnapplesmitch@example.com)")
+            messageErrorID = messageErrorID.message_id  
+        if(isValidEmail(textContent)):
+            await context.bot.deleteMessage(chat_id=update.effective_chat.id,message_id=messageErrorID)        
     elif (textContent.startswith("Subject:")):
         global subjectComponent
         subjectComponent = textContent
@@ -76,10 +91,10 @@ async def inline_query(update: Update, context: ContextTypes.DEFAULT_TYPE):
     global prevId
     global keyboard
     global completedKeyboard
-    if (toComponent != defaultToMessage and subjectComponent != defaultSubjectMessage and bodyComponent != defaultBodyMessage):
+    if (toComponent != defaultToMessage and subjectComponent != defaultSubjectMessage and bodyComponent != defaultBodyMessage and isValidEmail(toComponent)):
         keyboard = completedKeyboard
     reply_markup = InlineKeyboardMarkup(keyboard)
-    await context.bot.editMessageText(text=emailComponent,chat_id=update.effective_chat.id, message_id=prevId, reply_markup=reply_markup)
+    await context.bot.editMessageText(text=emailComponent,chat_id=update.effective_chat.id, message_id=prevId, reply_markup=reply_markup) 
     await update.message.delete()
 
 async def keyboard_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -120,6 +135,10 @@ def getSummary(prompt, maxlimit=50, randomness=0, model="text-davinci-003"):
 
     return response.choices[0].text.strip()
 
+def isValidEmail(email : str):
+    if('@' in email and '.com' in email):
+        return True
+    return False    
 
 def main():
     dp = ApplicationBuilder().token(TELEGRAM_API_KEY).build()
@@ -131,13 +150,14 @@ def main():
     dp.add_handler(CallbackQueryHandler(keyboard_callback)) 
 
     # Start the Bot
-    dp.run_polling()
+    dp.run_polling(pool_timeout=1)
 
     try:
         past_email_ids = set()
 
         while True:
             receive_new_email(past_email_ids)
+
 
             # Wait for 10 seconds before checking for new emails again
             time.sleep(10)

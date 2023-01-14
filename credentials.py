@@ -1,3 +1,6 @@
+# If modifying these scopes, delete the file token.json.
+SCOPES = ['https://mail.google.com/']
+
 GMAIL_USERNAME = "schinner.inc.and.sons@gmail.com"
 GMAIL_PASSWORD = "schinner.inc.and.sons123"
 

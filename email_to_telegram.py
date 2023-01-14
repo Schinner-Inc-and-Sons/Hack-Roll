@@ -1,4 +1,5 @@
 from credentials import *
+from openai import *
 
 import os.path
 

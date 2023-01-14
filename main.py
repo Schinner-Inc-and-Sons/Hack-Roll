@@ -8,7 +8,7 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 
-from telegram import Bot
+from telegram import Bot, InlineKeyboardButton, InlineKeyboardMarkup, Update
 
 import time
 
@@ -16,10 +16,71 @@ from base64 import urlsafe_b64encode
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
-from telegram.ext import Updater, CommandHandler
+from telegram.ext import Updater, CommandHandler, MessageHandler, CallbackQueryHandler, InlineQueryHandler, ContextTypes, ApplicationBuilder
 
 import openai
 
+defaultMessage = "To: \nSubject: \nBody: \n"
+defaultToMessage = "To: "
+defaultSubjectMessage = "Subject: "
+defaultBodyMessage = "Body: "
+toComponent = "To: "
+subjectComponent = "Subject: "
+bodyComponent = "Body: "
+emailComponent = defaultMessage
+prevId = 0
+keyboard = [
+    [InlineKeyboardButton("/To: ", switch_inline_query_current_chat="/To: ")],
+    [InlineKeyboardButton("/Subject: ", switch_inline_query_current_chat="/Subject: ")],
+    [InlineKeyboardButton("/Body: ", switch_inline_query_current_chat="/Body: ")]
+]
+completedKeyboard = keyboard.copy()
+completedKeyboard.append([InlineKeyboardButton("/Send", switch_inline_query_current_chat="Send")])
+
+def returnEmail():
+    return toComponent + "\n" + subjectComponent + "\n" + bodyComponent + "\n"
+
+async def email(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    global toComponent
+    global subjectComponent
+    global bodyComponent
+    toComponent = defaultToMessage
+    subjectComponent = defaultSubjectMessage
+    bodyComponent = defaultBodyMessage
+    global emailComponent
+    emailComponent = returnEmail()
+    global keyboard
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    msg = await context.bot.send_message(chat_id=update.effective_chat.id, text=emailComponent, reply_markup=reply_markup)
+    global prevId
+    prevId = msg.message_id
+
+
+async def inline_query(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    botName = "@schinner_inc_and_sons_bot /"
+    if not update.message.text.startswith(botName):
+        return
+    botNameLength = len(botName)
+    textContent = update.message.text[botNameLength:]
+    if (textContent.startswith("To:")):
+        global toComponent
+        toComponent = textContent
+    elif (textContent.startswith("Subject:")):
+        global subjectComponent
+        subjectComponent = textContent
+    elif (textContent.startswith("Body:")):
+        global bodyComponent
+        bodyComponent = textContent
+    global emailComponent
+    emailComponent = returnEmail()
+    global prevId
+    global keyboard
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    await context.bot.editMessageText(text=emailComponent,chat_id=update.effective_chat.id, message_id=prevId, reply_markup=reply_markup)
+    await update.message.delete()
+
+async def keyboard_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    print("hi")
 
 def send_email(to, subject, body):
     credentials = update_credentials()
@@ -65,13 +126,17 @@ def getSummary(prompt, maxlimit=50, randomness=0, model="text-davinci-003"):
 
 
 def main():
-    updater = Updater(TELEGRAM_API_KEY, use_context=True)
-    dp = updater.dispatcher
+    dp = ApplicationBuilder().token(TELEGRAM_API_KEY).build()
 
-    dp.add_handler(CommandHandler("email", handle_messages))
+    dp.add_handler(CommandHandler("eemail", handle_messages))
+    dp.add_handler(CommandHandler('email', email))
+    
+    #application.add_handler(InlineQueryHandler(callback=inline_query))
+    dp.add_handler(MessageHandler(callback=inline_query, filters=None)) 
+    dp.add_handler(CallbackQueryHandler(keyboard_callback)) 
 
     # Start the Bot
-    updater.start_polling()
+    dp.run_polling()
 
     try:
         past_email_ids = set()
@@ -89,7 +154,7 @@ def main():
     # Run the bot until you press Ctrl-C or the process receives SIGINT,
     # SIGTERM or SIGABRT. This should be used most of the time, since
     # start_polling() is non-blocking and will stop the bot gracefully.
-    updater.idle()
+    
 
 
 def update_credentials():

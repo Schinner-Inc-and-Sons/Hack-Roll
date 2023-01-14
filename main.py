@@ -35,7 +35,7 @@ keyboard = [
     [InlineKeyboardButton("/Body: ", switch_inline_query_current_chat="/Body: ")]
 ]
 completedKeyboard = keyboard.copy()
-completedKeyboard.append([InlineKeyboardButton("/Send", switch_inline_query_current_chat="Send")])
+completedKeyboard.append([InlineKeyboardButton("/Send", callback_data='callback_1')])
 
 def returnEmail():
     return toComponent + "\n" + subjectComponent + "\n" + bodyComponent + "\n"
@@ -75,12 +75,20 @@ async def inline_query(update: Update, context: ContextTypes.DEFAULT_TYPE):
     emailComponent = returnEmail()
     global prevId
     global keyboard
+    global completedKeyboard
+    if (toComponent != defaultToMessage and subjectComponent != defaultSubjectMessage and bodyComponent != defaultBodyMessage):
+        keyboard = completedKeyboard
     reply_markup = InlineKeyboardMarkup(keyboard)
     await context.bot.editMessageText(text=emailComponent,chat_id=update.effective_chat.id, message_id=prevId, reply_markup=reply_markup)
     await update.message.delete()
 
 async def keyboard_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    print("hi")
+    print(toComponent[4:])
+    print(subjectComponent[10:])
+    print(bodyComponent[7:])
+    send_email(toComponent[4:], subjectComponent[10:], bodyComponent[7:])
+    query = update.callback_query
+    await query.answer("Email Sent!")
 
 def send_email(to, subject, body):
     credentials = update_credentials()
@@ -104,18 +112,6 @@ def send_email(to, subject, body):
         send_message = None
     return send_message
 
-
-def handle_messages(update, context):
-    # Extract the necessary information from the message
-    message = update.message.text
-    message_text_list = message.split()
-    to = message_text_list[1]
-    subject = message_text_list[2]
-    body = ' '.join(message_text_list[3:])
-    send_email(to, subject, body)
-    update.message.reply_text('Email sent successfully!')
-
-
 def getSummary(prompt, maxlimit=50, randomness=0, model="text-davinci-003"):
     openai.api_key = OPENAI_API_KEY
 
@@ -128,7 +124,6 @@ def getSummary(prompt, maxlimit=50, randomness=0, model="text-davinci-003"):
 def main():
     dp = ApplicationBuilder().token(TELEGRAM_API_KEY).build()
 
-    dp.add_handler(CommandHandler("eemail", handle_messages))
     dp.add_handler(CommandHandler('email', email))
     
     #application.add_handler(InlineQueryHandler(callback=inline_query))

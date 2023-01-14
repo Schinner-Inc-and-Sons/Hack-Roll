@@ -1,4 +1,3 @@
-import os
 import openai
 
 OPENAI_API_KEY = ""

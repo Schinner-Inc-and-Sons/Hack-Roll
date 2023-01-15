@@ -10,12 +10,16 @@ TransferEmailBot is an application that allows users to send and receive emails 
 ## Installation Requirements
 Download all files in this repository.  
 Run `pip install -r requirements.txt`.  
-For the bot to work run the following python scripts concurrently:
-- main.py (Handles the polling and commands)
-- email_to_telegram.py
+For the bot to work run the following python scripts concurrently i.e. run `python <filename.py>` :  
+- main.py (Handles the polling and commands)  
+- email_to_telegram.py  
 
 ## Members  
 [Koh Ngiap Hin](https://github.com/kohnh)  
 [Jonathan Jiang](https://github.com/Hexumicx)  
 [Owen Leong](https://github.com/owenl131)  
 [Joshua Nee](https://github.com/joshuan98)  
+
+## Disclaimer  
+This bot has only been configured for single person usage. To create your instance, go to [@BotFather](https://t.me/BotFather) and run `/newbot` to get your own API key.
+Then replace the `TELEGRAM_API_KEY` in `credentials.py`.

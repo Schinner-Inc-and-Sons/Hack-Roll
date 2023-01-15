@@ -30,28 +30,31 @@ subjectComponent = "Subject: "
 bodyComponent = "Body: "
 emailComponent = defaultMessage
 prevId = -1
-keyboard = [
+defaultKeyboard = [
     [InlineKeyboardButton("/To: ", switch_inline_query_current_chat="/To: ")],
     [InlineKeyboardButton("/Subject: ", switch_inline_query_current_chat="/Subject: ")],
     [InlineKeyboardButton("/Body: ", switch_inline_query_current_chat="/Body: ")]
 ]
+keyboard = defaultKeyboard
 completedKeyboard = keyboard.copy()
 completedKeyboard.append([InlineKeyboardButton("/Send", callback_data='callback_1')])
 
 def returnEmail():
     return toComponent + "\n" + subjectComponent + "\n" + bodyComponent + "\n"
-
+CHAT_ID = ""
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await context.bot.send_message(chat_id=update.effective_chat.id, text="Welcome to Schinner Inc. and Sons. Please type /email to send an email.")
+    global CHAT_ID
+    CHAT_ID = update.message.chat_id
+    await context.bot.send_message(chat_id=update.message.chat_id, text="Welcome to Schinner Inc. and Sons. Please type /email to send an email.")
 
 async def email(update: Update, context: ContextTypes.DEFAULT_TYPE):
     global prevId
     if(prevId!=-1):
-        await context.bot.delete_message(chat_id=update.effective_chat.id,message_id=prevId)
+        await context.bot.delete_message(chat_id=update.message.chat_id,message_id=prevId)
         prevId = -1
     global messageErrorID
     if(messageErrorID!=-1):
-        await context.bot.delete_message(chat_id=update.effective_chat.id,message_id=messageErrorID)
+        await context.bot.delete_message(chat_id=update.message.chat_id,message_id=messageErrorID)
         messageErrorID = -1   
     global toComponent
     global subjectComponent
@@ -63,7 +66,7 @@ async def email(update: Update, context: ContextTypes.DEFAULT_TYPE):
     emailComponent = returnEmail()
     global keyboard
     reply_markup = InlineKeyboardMarkup(keyboard)
-    msg = await context.bot.send_message(chat_id=update.effective_chat.id, text=emailComponent, reply_markup=reply_markup)
+    msg = await context.bot.send_message(chat_id=update.message.chat_id, text=emailComponent, reply_markup=reply_markup)
     prevId = msg.message_id
 
 
@@ -72,6 +75,8 @@ async def inline_query(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not update.message.text.startswith(botName):
         await update.message.delete()
         return
+    global CHAT_ID
+    CHAT_ID = update.message.chat_id
     botNameLength = len(botName)
     textContent = update.message.text[botNameLength:]
     if (textContent.startswith("To:")):
@@ -81,14 +86,18 @@ async def inline_query(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if(not isValidEmail(textContent) and messageErrorID==-1):
             messageErrorID = await context.bot.send_message(chat_id=update.message.chat_id,text="Invalid Email Address!(e.g. johnapplesmitch@example.com)")
             messageErrorID = messageErrorID.message_id  
-        if(isValidEmail(textContent)):
-            await context.bot.deleteMessage(chat_id=update.effective_chat.id,message_id=messageErrorID)   
+        if(isValidEmail(textContent) and messageErrorID!=-1):
+            await context.bot.delete_message(chat_id=update.message.chat_id,message_id=messageErrorID)  
+            messageErrorID = -1 
     elif (textContent.startswith("Subject:")):
         global subjectComponent
         subjectComponent = textContent
     elif (textContent.startswith("Body:")):
         global bodyComponent
         bodyComponent = textContent
+    else:
+        await update.message.delete()
+        return
     global emailComponent
     emailComponent = returnEmail()
     global prevId
@@ -97,15 +106,20 @@ async def inline_query(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if (toComponent != defaultToMessage and subjectComponent != defaultSubjectMessage and bodyComponent != defaultBodyMessage and isValidEmail(toComponent)):
         keyboard = completedKeyboard
     reply_markup = InlineKeyboardMarkup(keyboard)
-    await context.bot.editMessageText(text=emailComponent,chat_id=update.effective_chat.id, message_id=prevId, reply_markup=reply_markup)
+    await context.bot.editMessageText(text=emailComponent,chat_id=update.message.chat_id, message_id=prevId, reply_markup=reply_markup)
     await update.message.delete()
 
 async def keyboard_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    print(toComponent[4:])
-    print(subjectComponent[10:])
-    print(bodyComponent[7:])
-    send_email(toComponent[4:], subjectComponent[10:], bodyComponent[7:])
+    print(toComponent[len("To:"):].strip())
+    print(subjectComponent[len("Subject:"):].strip())
+    print(bodyComponent[len("Body:"):].strip())
+    send_email(toComponent[len("To:"):].strip(),subjectComponent[len("Subject:"):].strip(),bodyComponent[len("Body:"):].strip())
     query = update.callback_query
+    global prevId
+    await context.bot.delete_message(chat_id=CHAT_ID,message_id=prevId)
+    prevId = -1
+    global keyboard
+    keyboard = defaultKeyboard
     await query.answer("Email Sent!")
 
 def send_email(to, subject, body):

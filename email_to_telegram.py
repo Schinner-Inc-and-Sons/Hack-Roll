@@ -25,7 +25,8 @@ import time
 
 def getSummary(prompt, maxlimit=50, randomness=0, model="text-davinci-003"):
     openai.api_key = OPENAI_API_KEY
-
+    if (len(prompt) < maxlimit):
+        return prompt
     response = openai.Completion.create(
         model=model, prompt='Summarise this "'+prompt+'"', temperature=randomness, max_tokens=maxlimit)
 

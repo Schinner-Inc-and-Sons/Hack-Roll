@@ -8,7 +8,7 @@ TransferEmailBot is an application that allows users to send and receive emails 
 `/email` - Brings up a dialog to craft an email  
 
 ##Members
-[Koh Ngiap Hin](https://github.com/kohnh) /br
-[Jonathan Jiang](https://github.com/Hexumicx) /br
-[Owen Leong](https://github.com/owenl131) \n
-[Joshua Nee](https://github.com/joshuan98) \n
+[Koh Ngiap Hin](https://github.com/kohnh)  
+[Jonathan Jiang](https://github.com/Hexumicx)  
+[Owen Leong](https://github.com/owenl131)  
+[Joshua Nee](https://github.com/joshuan98)  
